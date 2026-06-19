@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Excel → LaTeX Table</title>
+
+<style>
+body{
+    max-width:1200px;
+    margin:30px auto;
+    font-family:Arial, sans-serif;
+}
+
+h2{
+    margin-bottom:10px;
+}
+
+textarea{
+    width:100%;
+    height:300px;
+    font-family:Consolas, monospace;
+    font-size:14px;
+    padding:10px;
+    box-sizing:border-box;
+}
+
+button{
+    margin-top:10px;
+    margin-right:10px;
+    padding:10px 20px;
+    cursor:pointer;
+}
+
+#output{
+    margin-top:20px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Excel → LaTeX Table Converter</h2>
+
+<p>
+直接从 Excel 复制内容粘贴到下面：
+</p>
+
+<textarea id="input"></textarea>
+
+<br>
+
+<button onclick="convert()">Convert</button>
+<button onclick="copyOutput()">Copy Result</button>
+
+<h3>LaTeX Output</h3>
+
+<textarea id="output"></textarea>
+
+<script>
+
+function convert() {
+
+    const text = document.getElementById("input").value.trim();
+
+    const lines = text.split(/\r?\n/);
+
+    let result = [];
+
+    lines.forEach(line => {
+
+        const cols = line.split("\t");
+
+        const latexLine =
+            cols.map(v => v.trim())
+                .join(" & ")
+            + " \\\\";
+
+        result.push(latexLine);
+    });
+
+    document.getElementById("output").value =
+        result.join("\n");
+}
+
+function copyOutput() {
+
+    const output =
+        document.getElementById("output");
+
+    output.select();
+    document.execCommand("copy");
+
+    alert("Copied!");
+}
+
+</script>
+
+</body>
+</html>
