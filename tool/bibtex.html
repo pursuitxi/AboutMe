@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>BibTeX 字段注释工具</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f6f7fb;
+      color: #222;
+    }
+
+    header {
+      padding: 28px 36px 18px;
+      background: #111827;
+      color: white;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+
+    header p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+
+    main {
+      padding: 24px 36px 36px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .field-group {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fafafa;
+    }
+
+    .field-group h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px 12px;
+    }
+
+    label {
+      font-size: 14px;
+      user-select: none;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 6px;
+    }
+
+    .custom-line {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .custom-line input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 9px;
+      padding: 9px 14px;
+      background: #2563eb;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #4b5563;
+    }
+
+    button.light {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    select {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      background: white;
+    }
+
+    .io-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 540px;
+      resize: vertical;
+      padding: 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      background: #fbfbfb;
+    }
+
+    .hint {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .status {
+      font-size: 14px;
+      color: #047857;
+      margin-left: 6px;
+    }
+
+    code {
+      background: #eef2ff;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .config-grid,
+      .io-grid {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      header {
+        padding: 22px 18px 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>BibTeX 字段注释工具</h1>
+    <p>按 entry 类型保留指定字段，其余字段自动注释。适合清理 Google Scholar 复制下来的 BibTeX。</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>字段保留规则</h2>
+
+      <div class="config-grid">
+        <div class="field-group">
+          <h3>期刊 @article 保留字段</h3>
+          <div id="articleFields" class="checkbox-grid"></div>
+          <div class="custom-line">
+            <label>自定义：</label>
+            <input id="articleCustom" placeholder="例如 doi, url，用逗号分隔" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <h3>会议 @inproceedings / @conference 保留字段</h3>
+          <div id="conferenceFields" class="checkbox-grid"></div>
+          <div class="custom-line">
+            <label>自定义：</label>
+            <input id="conferenceCustom" placeholder="例如 doi, url，用逗号分隔" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <h3>其它类型保留字段</h3>
+          <div id="otherFields" class="checkbox-grid"></div>
+          <div class="custom-line">
+            <label>自定义：</label>
+            <input id="otherCustom" placeholder="例如 howpublished, note" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <h3>注释设置</h3>
+
+          <label>
+            注释符：
+            <select id="commentStyle">
+              <option value="//">//</option>
+              <option value="%">%</option>
+            </select>
+          </label>
+
+          <div class="toolbar">
+            <button class="light" onclick="setPreset('minimal')">常用精简</button>
+            <button class="light" onclick="setPreset('paper')">论文常用</button>
+            <button class="light" onclick="selectAllFields()">全选</button>
+            <button class="light" onclick="clearAllFields()">清空</button>
+          </div>
+
+          <p class="hint">
+            BibTeX 更标准的注释符是 <code>%</code>。如果你的 LaTeX / BibTeX 流程支持 <code>//</code>，也可以继续用 <code>//</code>。
+          </p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button onclick="processBibtex()">开始注释</button>
+        <button class="secondary" onclick="copyOutput()">复制结果</button>
+        <button class="light" onclick="loadExample()">载入示例</button>
+        <span id="status" class="status"></span>
+      </div>
+    </section>
+
+    <section class="io-grid">
+      <div class="panel">
+        <h2>输入 BibTeX</h2>
+        <textarea id="input" placeholder="把 Google Scholar 复制的 BibTeX 粘贴到这里"></textarea>
+      </div>
+
+      <div class="panel">
+        <h2>输出结果</h2>
+        <textarea id="output" placeholder="处理后的 BibTeX 会出现在这里"></textarea>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const COMMON_FIELDS = [
+      "title",
+      "author",
+      "journal",
+      "booktitle",
+      "year",
+      "pages",
+      "volume",
+      "number",
+      "publisher",
+      "organization",
+      "address",
+      "month",
+      "doi",
+      "url",
+      "note",
+      "editor",
+      "series",
+      "eprint",
+      "archivePrefix",
+      "primaryClass",
+      "school",
+      "institution"
+    ];
+
+    const DEFAULTS = {
+      article: ["title", "author", "journal", "publisher", "year", "volume", "number", "pages"],
+      conference: ["title", "author", "booktitle", "year"],
+      other: ["title", "author", "year"]
+    };
+
+    const PAPER_PRESET = {
+      article: ["title", "author", "journal", "publisher", "year", "volume", "number", "pages"],
+      conference: ["title", "author", "booktitle", "year"],
+      other: ["title", "author", "year"]
+    };
+
+    function initFieldGroup(containerId, type) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+
+      COMMON_FIELDS.forEach(field => {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+
+        checkbox.type = "checkbox";
+        checkbox.dataset.type = type;
+        checkbox.value = field.toLowerCase();
+
+        if (DEFAULTS[type].map(x => x.toLowerCase()).includes(field.toLowerCase())) {
+          checkbox.checked = true;
+        }
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(field));
+        container.appendChild(label);
+      });
+    }
+
+    function init() {
+      initFieldGroup("articleFields", "article");
+      initFieldGroup("conferenceFields", "conference");
+      initFieldGroup("otherFields", "other");
+      loadExample();
+    }
+
+    function getSelectedFields(type) {
+      const checked = [...document.querySelectorAll(`input[data-type="${type}"]:checked`)]
+        .map(x => x.value.toLowerCase());
+
+      const customInput = document.getElementById(type + "Custom");
+      const custom = customInput.value
+        .split(",")
+        .map(x => x.trim().toLowerCase())
+        .filter(Boolean);
+
+      return new Set([...checked, ...custom]);
+    }
+
+    function setPreset(name) {
+      clearAllFields(false);
+
+      const preset = name === "paper" ? PAPER_PRESET : DEFAULTS;
+
+      for (const type of ["article", "conference", "other"]) {
+        const fields = preset[type].map(x => x.toLowerCase());
+
+        document.querySelectorAll(`input[data-type="${type}"]`).forEach(cb => {
+          cb.checked = fields.includes(cb.value.toLowerCase());
+        });
+      }
+
+      showStatus(name === "paper" ? "已切换到论文常用字段。" : "已切换到常用精简字段。");
+    }
+
+    function selectAllFields() {
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+      showStatus("已全选字段。");
+    }
+
+    function clearAllFields(show = true) {
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+      if (show) {
+        showStatus("已清空字段选择。");
+      }
+    }
+
+    function showStatus(text) {
+      const status = document.getElementById("status");
+      status.textContent = text;
+
+      setTimeout(() => {
+        status.textContent = "";
+      }, 1800);
+    }
+
+    function loadExample() {
+      document.getElementById("input").value =
+`@article{alpert2011image,
+  title={Image segmentation by probabilistic bottom-up aggregation and cue integration},
+  author={Alpert, Sharon and Galun, Meirav and Brandt, Achi and Basri, Ronen},
+  journal=TPAMI,
+  pages={315--327},
+  volume={33},
+  number={2},
+  publisher={IEEE},
+  year={2011},
+}
+
+@inproceedings{margolin2014evaluate,
+  title={How to evaluate foreground maps?},
+  author={Margolin, Ran and Zelnik-Manor, Lihi and Tal, Ayellet},
+  booktitle=CVPR,
+  //pages={248--255},
+  doi={10.1109/CVPR.2014.39},
+  url={https://example.com},
+  year={2014}
+}
+
+@inproceedings{ravi2024sam2,
+  title={SAM 2: Segment Anything in Images and Videos},
+  author={Ravi, Nikhila and Gabeur, Valentin and Hu, Yuan-Ting and Hu, Ronghang and Ryali, Chaitanya and Ma, Tengyu and Khedr, Haitham and R{\\"a}dle, Roman and Rolland, Chloe and Gustafson, Laura and Mintun, Eric and Pan, Junting and Alwala, Kalyan Vasudev and Carion, Nicolas and Wu, Chao-Yuan and Girshick, Ross and Doll{\\'a}r, Piotr and Feichtenhofer, Christoph},
+  booktitle=ICLR,
+  pages={1--20},
+  year={2025}
+}`;
+      showStatus("已载入示例。");
+    }
+
+    function processBibtex() {
+      const input = document.getElementById("input").value;
+      const output = transformBibtex(input);
+      document.getElementById("output").value = output;
+      showStatus("处理完成。");
+    }
+
+    async function copyOutput() {
+      const output = document.getElementById("output").value;
+
+      if (!output.trim()) {
+        showStatus("输出为空。");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(output);
+        showStatus("已复制到剪贴板。");
+      } catch (e) {
+        const textarea = document.getElementById("output");
+        textarea.select();
+        document.execCommand("copy");
+        showStatus("已复制。");
+      }
+    }
+
+    function transformBibtex(text) {
+      let result = "";
+      let pos = 0;
+
+      while (pos < text.length) {
+        const at = text.indexOf("@", pos);
+
+        if (at === -1) {
+          result += text.slice(pos);
+          break;
+        }
+
+        result += text.slice(pos, at);
+
+        const entryInfo = readBibEntry(text, at);
+
+        if (!entryInfo) {
+          result += text[at];
+          pos = at + 1;
+          continue;
+        }
+
+        result += processEntry(entryInfo.entry);
+        pos = entryInfo.end;
+      }
+
+      return result;
+    }
+
+    function processEntry(entry) {
+      const typeMatch = entry.match(/^(\s*@\s*([a-zA-Z]+)\s*[\{\(])/);
+
+      if (!typeMatch) {
+        return entry;
+      }
+
+      const entryType = typeMatch[2].toLowerCase();
+
+      if (["string", "preamble", "comment"].includes(entryType)) {
+        return entry;
+      }
+
+      const openIndex = entry.search(/[\{\(]/);
+      const openChar = entry[openIndex];
+      const closeChar = openChar === "{" ? "}" : ")";
+
+      const closeIndex = findEntryCloseIndex(entry, openIndex, openChar, closeChar);
+
+      if (closeIndex === -1) {
+        return entry;
+      }
+
+      const beforeBody = entry.slice(0, openIndex + 1);
+      const body = entry.slice(openIndex + 1, closeIndex);
+      const afterBody = entry.slice(closeIndex);
+
+      const firstComma = findTopLevelComma(body);
+
+      if (firstComma === -1) {
+        return entry;
+      }
+
+      const keyPart = body.slice(0, firstComma + 1);
+      const fieldsPart = body.slice(firstComma + 1);
+
+      let keepSet;
+
+      if (entryType === "article") {
+        keepSet = getSelectedFields("article");
+      } else if (entryType === "inproceedings" || entryType === "conference") {
+        keepSet = getSelectedFields("conference");
+      } else {
+        keepSet = getSelectedFields("other");
+      }
+
+      const segments = splitFields(fieldsPart);
+
+      const newFields = segments.map(seg => {
+        if (seg.type !== "field") {
+          return seg.text;
+        }
+
+        const fieldName = seg.name.toLowerCase();
+
+        if (keepSet.has(fieldName)) {
+          return uncommentField(seg.text);
+        } else {
+          return commentField(seg.text);
+        }
+      }).join("");
+
+      return beforeBody + keyPart + newFields + afterBody;
+    }
+
+    function readBibEntry(text, start) {
+      const headerMatch = text.slice(start).match(/^@\s*([a-zA-Z]+)\s*[\{\(]/);
+
+      if (!headerMatch) {
+        return null;
+      }
+
+      const openIndex = start + headerMatch[0].length - 1;
+      const openChar = text[openIndex];
+      const closeChar = openChar === "{" ? "}" : ")";
+
+      let depth = 1;
+      let quote = false;
+
+      for (let i = openIndex + 1; i < text.length; i++) {
+        const ch = text[i];
+
+        if (quote) {
+          if (ch === '"' && !isEscaped(text, i)) {
+            quote = false;
+          }
+
+          continue;
+        }
+
+        if (ch === '"' && !isEscaped(text, i)) {
+          quote = true;
+        } else if (ch === openChar && !isEscaped(text, i)) {
+          depth++;
+        } else if (ch === closeChar && !isEscaped(text, i)) {
+          depth--;
+
+          if (depth === 0) {
+            return {
+              entry: text.slice(start, i + 1),
+              end: i + 1
+            };
+          }
+        }
+      }
+
+      return {
+        entry: text.slice(start),
+        end: text.length
+      };
+    }
+
+    function findEntryCloseIndex(entry, openIndex, openChar, closeChar) {
+      let depth = 1;
+      let quote = false;
+
+      for (let i = openIndex + 1; i < entry.length; i++) {
+        const ch = entry[i];
+
+        if (quote) {
+          if (ch === '"' && !isEscaped(entry, i)) {
+            quote = false;
+          }
+
+          continue;
+        }
+
+        if (ch === '"' && !isEscaped(entry, i)) {
+          quote = true;
+        } else if (ch === openChar && !isEscaped(entry, i)) {
+          depth++;
+        } else if (ch === closeChar && !isEscaped(entry, i)) {
+          depth--;
+
+          if (depth === 0) {
+            return i;
+          }
+        }
+      }
+
+      return -1;
+    }
+
+    function findTopLevelComma(body) {
+      let depth = 0;
+      let quote = false;
+
+      for (let i = 0; i < body.length; i++) {
+        const ch = body[i];
+
+        if (quote) {
+          if (ch === '"' && !isEscaped(body, i)) {
+            quote = false;
+          }
+
+          continue;
+        }
+
+        if (ch === '"' && !isEscaped(body, i)) {
+          quote = true;
+        } else if ((ch === "{" || ch === "(") && !isEscaped(body, i)) {
+          depth++;
+        } else if ((ch === "}" || ch === ")") && !isEscaped(body, i)) {
+          if (depth > 0) {
+            depth--;
+          }
+        } else if (ch === "," && depth === 0) {
+          return i;
+        }
+      }
+
+      return -1;
+    }
+
+    function splitFields(text) {
+      const segments = [];
+      let pos = 0;
+
+      while (pos < text.length) {
+        const start = pos;
+
+        while (pos < text.length && /\s/.test(text[pos])) {
+          pos++;
+        }
+
+        if (pos >= text.length) {
+          segments.push({
+            type: "other",
+            text: text.slice(start)
+          });
+          break;
+        }
+
+        let fieldStart = pos;
+        let commentPrefixLength = 0;
+
+        if (text.startsWith("//", fieldStart)) {
+          commentPrefixLength = 2;
+          fieldStart += 2;
+        } else if (text.startsWith("%", fieldStart)) {
+          commentPrefixLength = 1;
+          fieldStart += 1;
+        }
+
+        while (fieldStart < text.length && /[ \t]/.test(text[fieldStart])) {
+          fieldStart++;
+        }
+
+        const fieldMatch = text.slice(fieldStart).match(/^([a-zA-Z][a-zA-Z0-9_\-:]*)\s*=/);
+
+        if (!fieldMatch) {
+          if (commentPrefixLength > 0) {
+            const lineEnd = text.indexOf("\n", pos);
+            const end = lineEnd === -1 ? text.length : lineEnd + 1;
+
+            segments.push({
+              type: "other",
+              text: text.slice(start, end)
+            });
+
+            pos = end;
+            continue;
+          }
+
+          segments.push({
+            type: "other",
+            text: text.slice(start, pos + 1)
+          });
+
+          pos++;
+          continue;
+        }
+
+        const fieldName = fieldMatch[1];
+        const valueStart = fieldStart + fieldMatch[0].length;
+        const fieldEnd = findFieldEnd(text, valueStart);
+
+        segments.push({
+          type: "field",
+          name: fieldName,
+          text: text.slice(start, fieldEnd)
+        });
+
+        pos = fieldEnd;
+      }
+
+      return segments;
+    }
+
+    function findFieldEnd(text, valueStart) {
+      let depth = 0;
+      let quote = false;
+
+      for (let i = valueStart; i < text.length; i++) {
+        const ch = text[i];
+
+        if (quote) {
+          if (ch === '"' && !isEscaped(text, i)) {
+            quote = false;
+          }
+
+          continue;
+        }
+
+        if (ch === '"' && !isEscaped(text, i)) {
+          quote = true;
+        } else if ((ch === "{" || ch === "(") && !isEscaped(text, i)) {
+          depth++;
+        } else if ((ch === "}" || ch === ")") && !isEscaped(text, i)) {
+          if (depth > 0) {
+            depth--;
+          }
+        } else if (ch === "," && depth === 0) {
+          return i + 1;
+        }
+      }
+
+      return text.length;
+    }
+
+    function commentField(fieldText) {
+      const style = document.getElementById("commentStyle").value;
+
+      return fieldText.split("\n").map(line => {
+        if (line.trim() === "") {
+          return line;
+        }
+
+        const indentMatch = line.match(/^(\s*)/);
+        const indent = indentMatch ? indentMatch[1] : "";
+        const rest = line.slice(indent.length);
+
+        if (rest.startsWith("//") || rest.startsWith("%")) {
+          return line;
+        }
+
+        return indent + style + rest;
+      }).join("\n");
+    }
+
+    function uncommentField(fieldText) {
+      return fieldText.split("\n").map(line => {
+        const indentMatch = line.match(/^(\s*)/);
+        const indent = indentMatch ? indentMatch[1] : "";
+        let rest = line.slice(indent.length);
+
+        if (rest.startsWith("//")) {
+          rest = rest.slice(2);
+
+          if (rest.startsWith(" ")) {
+            rest = rest.slice(1);
+          }
+
+          return indent + rest;
+        }
+
+        if (rest.startsWith("%")) {
+          rest = rest.slice(1);
+
+          if (rest.startsWith(" ")) {
+            rest = rest.slice(1);
+          }
+
+          return indent + rest;
+        }
+
+        return line;
+      }).join("\n");
+    }
+
+    function isEscaped(text, index) {
+      let count = 0;
+
+      for (let i = index - 1; i >= 0 && text[i] === "\\"; i--) {
+        count++;
+      }
+
+      return count % 2 === 1;
+    }
+
+    init();
+  </script>
+</body>
+</html>
