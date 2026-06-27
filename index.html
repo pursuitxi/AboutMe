@@ -246,12 +246,11 @@
 <script>
 window.addEventListener('load', function() {
   document.querySelectorAll('.gallery-grid').forEach(function(gallery) {
-    var originalItems = Array.from(gallery.children);
-    if (!originalItems.length) return;
-
-    // 避免重复初始化
     if (gallery.dataset.infiniteGalleryReady === 'true') return;
     gallery.dataset.infiniteGalleryReady = 'true';
+
+    var originalItems = Array.from(gallery.children);
+    if (!originalItems.length) return;
 
     // 禁止图片默认拖拽
     gallery.querySelectorAll('img').forEach(function(img) {
@@ -274,48 +273,118 @@ window.addEventListener('load', function() {
     var originalWidth = gallery.scrollWidth / 3;
     gallery.scrollLeft = originalWidth;
 
-    var isAdjusting = false;
+    var isDragging = false;
+    var isMomentum = false;
 
-    function fixInfiniteScroll() {
-      if (isAdjusting) return;
+    var startX = 0;
+    var startScrollLeft = 0;
+    var targetScrollLeft = gallery.scrollLeft;
 
+    var rafId = null;
+    var momentumRafId = null;
+
+    var lastTargetScrollLeft = gallery.scrollLeft;
+    var lastTime = performance.now();
+    var velocity = 0;
+    var hasMoved = false;
+
+    function normalizeLoop() {
       if (gallery.scrollLeft <= 1) {
-        isAdjusting = true;
         gallery.scrollLeft += originalWidth;
-        requestAnimationFrame(function() {
-          isAdjusting = false;
-        });
+        targetScrollLeft += originalWidth;
+        startScrollLeft += originalWidth;
       } else if (gallery.scrollLeft >= originalWidth * 2 - 1) {
-        isAdjusting = true;
         gallery.scrollLeft -= originalWidth;
-        requestAnimationFrame(function() {
-          isAdjusting = false;
-        });
+        targetScrollLeft -= originalWidth;
+        startScrollLeft -= originalWidth;
       }
     }
 
-    gallery.addEventListener('scroll', fixInfiniteScroll);
+    function requestScrollFrame() {
+      if (rafId !== null) return;
+
+      rafId = requestAnimationFrame(function() {
+        rafId = null;
+        gallery.scrollLeft = targetScrollLeft;
+        normalizeLoop();
+      });
+    }
+
+    function stopMomentum() {
+      isMomentum = false;
+
+      if (momentumRafId !== null) {
+        cancelAnimationFrame(momentumRafId);
+        momentumRafId = null;
+      }
+
+      gallery.classList.remove('is-momentum');
+    }
+
+    function startMomentum() {
+      if (Math.abs(velocity) < 0.03) {
+        gallery.classList.remove('is-dragging');
+        return;
+      }
+
+      isMomentum = true;
+      gallery.classList.remove('is-dragging');
+      gallery.classList.add('is-momentum');
+
+      function step() {
+        velocity *= 0.94;
+
+        if (Math.abs(velocity) < 0.02) {
+          stopMomentum();
+          return;
+        }
+
+        gallery.scrollLeft += velocity * 16;
+        normalizeLoop();
+
+        momentumRafId = requestAnimationFrame(step);
+      }
+
+      momentumRafId = requestAnimationFrame(step);
+    }
+
+    gallery.addEventListener('scroll', function() {
+      if (isDragging || isMomentum) return;
+
+      requestAnimationFrame(function() {
+        normalizeLoop();
+      });
+    });
 
     // 鼠标滚轮上下滚动时，转成横向滚动
+    // 双指横向滑动仍然交给浏览器原生处理
     gallery.addEventListener('wheel', function(e) {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        gallery.scrollLeft += e.deltaY;
-      }
+      if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+
+      e.preventDefault();
+
+      stopMomentum();
+
+      targetScrollLeft = gallery.scrollLeft + e.deltaY;
+      requestScrollFrame();
     }, { passive: false });
 
-    // 鼠标按住左右拖动
-    var isDragging = false;
-    var startX = 0;
-    var startScrollLeft = 0;
-
+    // 鼠标左键按住拖拽
     gallery.addEventListener('pointerdown', function(e) {
-      // 只处理鼠标左键，不影响手机触摸滑动
       if (e.pointerType !== 'mouse' || e.button !== 0) return;
 
+      stopMomentum();
+
       isDragging = true;
+      hasMoved = false;
+
       startX = e.clientX;
       startScrollLeft = gallery.scrollLeft;
+      targetScrollLeft = gallery.scrollLeft;
+
+      lastTargetScrollLeft = targetScrollLeft;
+      lastTime = performance.now();
+      velocity = 0;
 
       gallery.classList.add('is-dragging');
       gallery.setPointerCapture(e.pointerId);
@@ -327,33 +396,56 @@ window.addEventListener('load', function() {
       e.preventDefault();
 
       var dx = e.clientX - startX;
-      gallery.scrollLeft = startScrollLeft - dx;
+
+      if (Math.abs(dx) > 3) {
+        hasMoved = true;
+      }
+
+      targetScrollLeft = startScrollLeft - dx;
+
+      var now = performance.now();
+      var dt = Math.max(1, now - lastTime);
+      var delta = targetScrollLeft - lastTargetScrollLeft;
+
+      velocity = 0.8 * velocity + 0.2 * (delta / dt);
+
+      lastTargetScrollLeft = targetScrollLeft;
+      lastTime = now;
+
+      requestScrollFrame();
     });
 
     gallery.addEventListener('pointerup', function(e) {
       if (!isDragging) return;
 
       isDragging = false;
-      gallery.classList.remove('is-dragging');
 
       try {
         gallery.releasePointerCapture(e.pointerId);
       } catch (err) {}
+
+      startMomentum();
     });
 
     gallery.addEventListener('pointercancel', function() {
       isDragging = false;
       gallery.classList.remove('is-dragging');
+      stopMomentum();
     });
 
-    gallery.addEventListener('pointerleave', function() {
-      isDragging = false;
-      gallery.classList.remove('is-dragging');
-    });
+    // 防止拖拽后误触点击
+    gallery.addEventListener('click', function(e) {
+      if (!hasMoved) return;
 
-    // 窗口尺寸变化后重新计算宽度
+      e.preventDefault();
+      e.stopPropagation();
+
+      hasMoved = false;
+    }, true);
+
     window.addEventListener('resize', function() {
       originalWidth = gallery.scrollWidth / 3;
+      normalizeLoop();
     });
   });
 });

@@ -246,15 +246,23 @@ h2 {
   cursor: grab;
   user-select: none;
   overscroll-behavior-inline: contain;
+  scroll-behavior: auto;
 }
 
-.gallery-grid.is-dragging {
+.gallery-grid.is-dragging,
+.gallery-grid.is-momentum {
   cursor: grabbing;
   scroll-snap-type: none;
 }
 
-.gallery-grid.is-dragging .gallery-item {
+.gallery-grid.is-dragging .gallery-item,
+.gallery-grid.is-momentum .gallery-item {
   pointer-events: none;
+}
+
+.gallery-grid img {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .gallery-item {
