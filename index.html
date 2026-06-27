@@ -16,6 +16,7 @@
 
   try {
     savedTheme = localStorage.getItem(storageKey);
+    if (savedTheme !== 'dark' && savedTheme !== 'light') savedTheme = null;
   } catch (err) {}
 
   var prefersDark = false;
@@ -28,7 +29,7 @@
   document.documentElement.style.colorScheme = theme;
 })();
 </script>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles_mobile_fixed.css?v=night-mobile-fix">
 </head>
 <body>
 <button class="theme-toggle" type="button" aria-label="切换夜晚模式" aria-pressed="false" title="切换夜晚模式">
@@ -36,6 +37,16 @@
   <span class="theme-toggle-text">Night</span>
 </button>
 <div class="page">
+
+  <!-- <nav>
+    <a href="#about">About</a>
+    <div class="nav-dot"></div>
+    <a href="#news">News</a>
+    <div class="nav-dot"></div>
+    <a href="#publications">Publications</a>
+    <div class="nav-dot"></div>
+    <a href="YOUR_CV_URL.pdf">CV</a>
+  </nav> -->
 
   <!-- ── HERO ── -->
   <div class="hero" id="about">

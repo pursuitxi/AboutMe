@@ -42,26 +42,6 @@
   --toggle-shadow: rgba(0, 0, 0, 0.34);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --cream: #141210;
-    --cream-light: #1d1916;
-    --white: #24201c;
-    --black: #f7efe6;
-    --ink: #f2e8dc;
-    --ink-mid: #cfc2b2;
-    --ink-light: #a99a88;
-    --accent: #c47a56;
-    --accent-rgb: 196, 122, 86;
-    --border: rgba(242,232,220,0.16);
-    --border-light: rgba(242,232,220,0.09);
-    --card-shadow: rgba(0, 0, 0, 0.34);
-    --gallery-card: #211d19;
-    --caption-bg: rgba(10, 9, 8, 0.72);
-    --toggle-bg: rgba(29, 25, 22, 0.84);
-    --toggle-shadow: rgba(0, 0, 0, 0.34);
-  }
-}
 
 html, body {
   background: var(--cream);
@@ -103,6 +83,8 @@ html, body {
   font-weight: 500;
   letter-spacing: 0.04em;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: background-color .25s ease, color .25s ease, border-color .25s ease, transform .2s ease, box-shadow .25s ease;
 }
 
@@ -131,12 +113,6 @@ html, body {
   font-size: 15px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .theme-toggle-icon::before {
-    content: "☀";
-    font-size: 15px;
-  }
-}
 
 /* ── Top nav ── */
 nav {
