@@ -244,13 +244,21 @@
 </div>
 
 <script>
-  window.addEventListener('load', function() {
-    var gallery = document.querySelector('.gallery-grid');
-    if (!gallery) return;
-
+window.addEventListener('load', function() {
+  document.querySelectorAll('.gallery-grid').forEach(function(gallery) {
     var originalItems = Array.from(gallery.children);
     if (!originalItems.length) return;
 
+    // 避免重复初始化
+    if (gallery.dataset.infiniteGalleryReady === 'true') return;
+    gallery.dataset.infiniteGalleryReady = 'true';
+
+    // 禁止图片默认拖拽
+    gallery.querySelectorAll('img').forEach(function(img) {
+      img.setAttribute('draggable', 'false');
+    });
+
+    // 前后各复制一份，实现无限循环
     originalItems.slice().reverse().forEach(function(item) {
       gallery.insertBefore(item.cloneNode(true), gallery.firstChild);
     });
@@ -259,11 +267,16 @@
       gallery.appendChild(item.cloneNode(true));
     });
 
+    gallery.querySelectorAll('img').forEach(function(img) {
+      img.setAttribute('draggable', 'false');
+    });
+
     var originalWidth = gallery.scrollWidth / 3;
     gallery.scrollLeft = originalWidth;
 
     var isAdjusting = false;
-    gallery.addEventListener('scroll', function() {
+
+    function fixInfiniteScroll() {
       if (isAdjusting) return;
 
       if (gallery.scrollLeft <= 1) {
@@ -279,8 +292,71 @@
           isAdjusting = false;
         });
       }
+    }
+
+    gallery.addEventListener('scroll', fixInfiniteScroll);
+
+    // 鼠标滚轮上下滚动时，转成横向滚动
+    gallery.addEventListener('wheel', function(e) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        gallery.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+
+    // 鼠标按住左右拖动
+    var isDragging = false;
+    var startX = 0;
+    var startScrollLeft = 0;
+
+    gallery.addEventListener('pointerdown', function(e) {
+      // 只处理鼠标左键，不影响手机触摸滑动
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+
+      isDragging = true;
+      startX = e.clientX;
+      startScrollLeft = gallery.scrollLeft;
+
+      gallery.classList.add('is-dragging');
+      gallery.setPointerCapture(e.pointerId);
+    });
+
+    gallery.addEventListener('pointermove', function(e) {
+      if (!isDragging) return;
+
+      e.preventDefault();
+
+      var dx = e.clientX - startX;
+      gallery.scrollLeft = startScrollLeft - dx;
+    });
+
+    gallery.addEventListener('pointerup', function(e) {
+      if (!isDragging) return;
+
+      isDragging = false;
+      gallery.classList.remove('is-dragging');
+
+      try {
+        gallery.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    });
+
+    gallery.addEventListener('pointercancel', function() {
+      isDragging = false;
+      gallery.classList.remove('is-dragging');
+    });
+
+    gallery.addEventListener('pointerleave', function() {
+      isDragging = false;
+      gallery.classList.remove('is-dragging');
+    });
+
+    // 窗口尺寸变化后重新计算宽度
+    window.addEventListener('resize', function() {
+      originalWidth = gallery.scrollWidth / 3;
     });
   });
+});
 </script>
 </body>
 </html>

@@ -242,6 +242,21 @@ h2 {
   display: none;
 }
 
+.gallery-grid {
+  cursor: grab;
+  user-select: none;
+  overscroll-behavior-inline: contain;
+}
+
+.gallery-grid.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+}
+
+.gallery-grid.is-dragging .gallery-item {
+  pointer-events: none;
+}
+
 .gallery-item {
   position: relative;
   height: 260px;
