@@ -3,24 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fefbf3">
 <title>Chen-Yang Wang | Research Homepage</title>
 <link rel="icon" href="logo1.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script>
+(function() {
+  var storageKey = 'cyw-theme';
+  var savedTheme = null;
+
+  try {
+    savedTheme = localStorage.getItem(storageKey);
+  } catch (err) {}
+
+  var prefersDark = false;
+  try {
+    prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } catch (err) {}
+
+  var theme = savedTheme || (prefersDark ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+})();
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<button class="theme-toggle" type="button" aria-label="切换夜晚模式" aria-pressed="false" title="切换夜晚模式">
+  <span class="theme-toggle-icon" aria-hidden="true"></span>
+  <span class="theme-toggle-text">Night</span>
+</button>
 <div class="page">
-
-  <!-- <nav>
-    <a href="#about">About</a>
-    <div class="nav-dot"></div>
-    <a href="#news">News</a>
-    <div class="nav-dot"></div>
-    <a href="#publications">Publications</a>
-    <div class="nav-dot"></div>
-    <a href="YOUR_CV_URL.pdf">CV</a>
-  </nav> -->
 
   <!-- ── HERO ── -->
   <div class="hero" id="about">
@@ -242,6 +257,86 @@
   </footer>
 
 </div>
+
+<script>
+(function() {
+  var storageKey = 'cyw-theme';
+
+  function safeGetSavedTheme() {
+    try {
+      return localStorage.getItem(storageKey);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function safeSaveTheme(theme) {
+    try {
+      localStorage.setItem(storageKey, theme);
+    } catch (err) {}
+  }
+
+  function getCurrentTheme() {
+    return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function updateThemeColor(theme) {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) return;
+    meta.setAttribute('content', theme === 'dark' ? '#141210' : '#fefbf3');
+  }
+
+  function updateButton(theme) {
+    var button = document.querySelector('.theme-toggle');
+    if (!button) return;
+
+    var text = button.querySelector('.theme-toggle-text');
+    if (text) {
+      text.textContent = theme === 'dark' ? 'Day' : 'Night';
+    }
+
+    button.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+    button.setAttribute('title', theme === 'dark' ? '切换到白天模式' : '切换到夜晚模式');
+  }
+
+  function setTheme(theme, shouldSave) {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    updateThemeColor(theme);
+    updateButton(theme);
+
+    if (shouldSave) {
+      safeSaveTheme(theme);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var button = document.querySelector('.theme-toggle');
+    setTheme(getCurrentTheme(), false);
+
+    if (!button) return;
+
+    button.addEventListener('click', function() {
+      var nextTheme = getCurrentTheme() === 'dark' ? 'light' : 'dark';
+      setTheme(nextTheme, true);
+    });
+  });
+
+  try {
+    var media = window.matchMedia('(prefers-color-scheme: dark)');
+    var onSystemThemeChange = function(e) {
+      if (safeGetSavedTheme()) return;
+      setTheme(e.matches ? 'dark' : 'light', false);
+    };
+
+    if (media.addEventListener) {
+      media.addEventListener('change', onSystemThemeChange);
+    } else if (media.addListener) {
+      media.addListener(onSystemThemeChange);
+    }
+  } catch (err) {}
+})();
+</script>
 
 <script>
 window.addEventListener('load', function() {
