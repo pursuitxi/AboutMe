@@ -314,7 +314,7 @@ h2 {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 0.5rem;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
   scrollbar-width: none;

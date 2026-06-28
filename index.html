@@ -376,8 +376,19 @@ window.addEventListener('load', function() {
       img.setAttribute('draggable', 'false');
     });
 
-    var originalWidth = gallery.scrollWidth / 3;
-    gallery.scrollLeft = originalWidth;
+    var originalCount = originalItems.length;
+    var loopStart = 0;
+    var loopEnd = 0;
+    var loopWidth = 0;
+
+    function measureLoop() {
+      loopStart = gallery.children[originalCount].offsetLeft;
+      loopEnd = gallery.children[originalCount * 2].offsetLeft;
+      loopWidth = loopEnd - loopStart;
+    }
+
+    measureLoop();
+    gallery.scrollLeft = loopStart;
 
     var isDragging = false;
     var isMomentum = false;
@@ -395,14 +406,16 @@ window.addEventListener('load', function() {
     var hasMoved = false;
 
     function normalizeLoop() {
-      if (gallery.scrollLeft <= 1) {
-        gallery.scrollLeft += originalWidth;
-        targetScrollLeft += originalWidth;
-        startScrollLeft += originalWidth;
-      } else if (gallery.scrollLeft >= originalWidth * 2 - 1) {
-        gallery.scrollLeft -= originalWidth;
-        targetScrollLeft -= originalWidth;
-        startScrollLeft -= originalWidth;
+      if (!loopWidth) return;
+
+      if (gallery.scrollLeft < loopStart) {
+        gallery.scrollLeft += loopWidth;
+        targetScrollLeft += loopWidth;
+        startScrollLeft += loopWidth;
+      } else if (gallery.scrollLeft >= loopEnd) {
+        gallery.scrollLeft -= loopWidth;
+        targetScrollLeft -= loopWidth;
+        startScrollLeft -= loopWidth;
       }
     }
 
@@ -432,6 +445,8 @@ window.addEventListener('load', function() {
         gallery.classList.remove('is-dragging');
         return;
       }
+
+      velocity = Math.max(-2, Math.min(2, velocity));
 
       isMomentum = true;
       gallery.classList.remove('is-dragging');
@@ -550,7 +565,7 @@ window.addEventListener('load', function() {
     }, true);
 
     window.addEventListener('resize', function() {
-      originalWidth = gallery.scrollWidth / 3;
+      measureLoop();
       normalizeLoop();
     });
   });
