@@ -161,7 +161,7 @@ button, label[for] {
 
 .range-action-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: end;
 }
@@ -862,7 +862,6 @@ select:focus {
                   </div>
                   <input id="zoomFactor" class="range" type="range" min="2" max="16" step="1" value="4">
                 </div>
-                <button id="locateButton" class="button button-primary button-inline" type="button" disabled>定位源框</button>
               </div>
             </div>
           </section>
@@ -1042,7 +1041,6 @@ select:focus {
   const elements = {
     imageInput: document.querySelector('#imageInput'),
     exportButton: document.querySelector('#exportButton'),
-    locateButton: document.querySelector('#locateButton'),
     boxWidth: document.querySelector('#boxWidth'),
     boxHeight: document.querySelector('#boxHeight'),
     zoomFactor: document.querySelector('#zoomFactor'),
@@ -1372,7 +1370,6 @@ select:focus {
       state.source = null;
       elements.emptyState.hidden = true;
       elements.exportButton.disabled = false;
-      elements.locateButton.disabled = false;
       elements.imageMeta.textContent = `${state.fileName} · ${image.naturalWidth} × ${image.naturalHeight}`;
       setStatus(`已加载 ${state.fileName}，点击图片或输入坐标放置放大框。`);
       resizeCanvas();
@@ -1494,7 +1491,6 @@ select:focus {
     });
 
     elements.exportButton.addEventListener('click', exportPng);
-    elements.locateButton.addEventListener('click', applyCoordinates);
     [elements.coordX, elements.coordY].forEach((input) => {
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') applyCoordinates();
