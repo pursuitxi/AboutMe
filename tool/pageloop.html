@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f5f8ff" />
+  <title>PageLoop — PDF / PPTX to GIF</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --panel: rgba(15, 23, 42, .76);
+      --panel-solid: #101827;
+      --panel-2: #0c1322;
+      --text: #f7f9fc;
+      --muted: #8f9bb0;
+      --muted-2: #667085;
+      --border: rgba(148, 163, 184, .16);
+      --border-strong: rgba(148, 163, 184, .26);
+      --accent: #6d7cff;
+      --accent-2: #35d1ff;
+      --accent-hover: #8490ff;
+      --danger: #ff7f8d;
+      --ok: #5ee1a5;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .32);
+      --glow: 0 0 0 1px rgba(109,124,255,.14), 0 18px 60px rgba(42,63,140,.16);
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow-x: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 13% -4%, rgba(109,124,255,.18), transparent 28%),
+        radial-gradient(circle at 88% 6%, rgba(53,209,255,.12), transparent 24%),
+        linear-gradient(180deg, #090e19 0%, var(--bg) 55%, #060910 100%);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .17;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 38px 38px;
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+    }
+    .wrap {
+      position: relative;
+      width: min(1240px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 28px 0 52px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, rgba(109,124,255,.95), rgba(53,209,255,.9));
+      box-shadow: 0 10px 34px rgba(65,90,255,.28);
+      flex: 0 0 auto;
+    }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 18px; line-height: 1; font-weight: 780; letter-spacing: -.025em; }
+    .brand-sub { margin-top: 5px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .local-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      min-height: 32px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: 999px; color: var(--muted); font-size: 12px;
+      background: rgba(255,255,255,.025);
+    }
+    .local-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 12px rgba(94,225,165,.65); }
+
+    .upload-stage {
+      min-height: 610px;
+      display: grid;
+      align-content: center;
+      gap: 30px;
+      padding: 34px 0 54px;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+    .app-loaded .upload-stage { display: none; }
+    .hero-copy { text-align: center; max-width: 780px; margin: 0 auto; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 14px; color: #9aa5ff; font-size: 11px; font-weight: 760;
+      letter-spacing: .16em; text-transform: uppercase;
+    }
+    .eyebrow::before, .eyebrow::after { content: ""; width: 24px; height: 1px; background: rgba(154,165,255,.45); }
+    .hero-copy h1 {
+      margin: 0;
+      font-size: clamp(38px, 6vw, 72px);
+      line-height: .98;
+      letter-spacing: -.055em;
+      font-weight: 820;
+    }
+    .hero-copy h1 .gradient {
+      background: linear-gradient(100deg, #ffffff 0%, #b8c0ff 48%, #7ee7ff 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero-copy p { max-width: 620px; margin: 18px auto 0; color: var(--muted); font-size: 15px; line-height: 1.75; }
+
+    .upload-card {
+      position: relative;
+      width: min(890px, 100%);
+      margin: 0 auto;
+      padding: 1px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(109,124,255,.52), rgba(53,209,255,.12) 46%, rgba(255,255,255,.08));
+      box-shadow: var(--shadow), 0 0 100px rgba(52,72,180,.11);
+    }
+    .upload-inner {
+      position: relative;
+      border-radius: 25px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(13,20,35,.95), rgba(9,15,27,.93));
+      backdrop-filter: blur(18px);
+    }
+    .drop {
+      min-height: 292px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      border: 1.5px dashed rgba(148,163,184,.27);
+      border-radius: 19px;
+      padding: 38px 28px;
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(109,124,255,.09), transparent 44%),
+        rgba(255,255,255,.014);
+    }
+    .drop:hover, .drop.dragover {
+      border-color: rgba(126,231,255,.7);
+      background: radial-gradient(circle at 50% 20%, rgba(109,124,255,.16), transparent 48%), rgba(255,255,255,.026);
+    }
+    .drop.dragover { transform: scale(.997); }
+    .drop-icon {
+      width: 70px; height: 70px; margin: 0 auto 18px; border-radius: 22px;
+      display: grid; place-items: center;
+      color: #dbe4ff;
+      background: linear-gradient(145deg, rgba(109,124,255,.18), rgba(53,209,255,.07));
+      border: 1px solid rgba(154,165,255,.18);
+      box-shadow: inset 0 1px rgba(255,255,255,.08);
+    }
+    .drop-icon svg { width: 31px; height: 31px; }
+    .drop strong { display: block; font-size: 23px; letter-spacing: -.025em; margin-bottom: 8px; }
+    .drop span { display: block; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .formats { margin-top: 9px; color: #6f7c93; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+    input[type="file"] { display: none; }
+
+    button, .button-link {
+      appearance: none; border: 1px solid transparent; border-radius: 11px;
+      min-height: 42px; padding: 0 16px;
+      font: inherit; font-weight: 700; cursor: pointer;
+      color: white; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease;
+      background: linear-gradient(135deg, var(--accent), #5368ef);
+      box-shadow: 0 10px 24px rgba(70,85,220,.18);
+    }
+    button:hover:not(:disabled), .button-link:hover { transform: translateY(-1px); background: linear-gradient(135deg, var(--accent-hover), #6678f5); }
+    button:disabled { cursor: not-allowed; opacity: .42; transform: none; }
+    button.secondary { background: rgba(255,255,255,.035); color: #d8deea; border-color: var(--border); box-shadow: none; }
+    button.secondary:hover:not(:disabled) { background: rgba(255,255,255,.065); }
+    button.danger { background: transparent; color: var(--danger); border-color: rgba(255,127,141,.28); box-shadow: none; }
+    #chooseBtn { margin-top: 18px; min-width: 142px; }
+
+    .upload-progress { max-width: 440px; margin: 15px auto 2px; min-height: 30px; }
+    .mini-track { height: 2px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.06); }
+    .mini-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .18s linear; }
+    .hero-status { margin-top: 9px; color: var(--muted-2); text-align: center; font-size: 11px; }
+    .hero-status.error { color: var(--danger); }
+    .hero-status.ok { color: var(--ok); }
+    .trust-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 22px; margin-top: -5px; color: var(--muted-2); font-size: 11px; }
+    .trust-row span { display: inline-flex; align-items: center; gap: 7px; }
+    .trust-row b { width: 5px; height: 5px; border-radius: 50%; background: #6572a4; }
+
+    .workspace {
+      display: none;
+      grid-template-columns: minmax(0, 1.65fr) minmax(330px, .78fr);
+      gap: 18px;
+      align-items: start;
+      animation: enter .28s ease both;
+    }
+    .app-loaded .workspace { display: grid; }
+    @keyframes enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+    .card {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(16,24,39,.84), rgba(10,16,28,.88));
+      border-radius: 18px;
+      box-shadow: var(--glow);
+      backdrop-filter: blur(16px);
+    }
+    .preview-card { padding: 16px; }
+    .preview-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 14px;
+      margin-bottom: 14px; padding: 2px 2px 0;
+    }
+    .file-block { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .file-icon {
+      width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center;
+      border-radius: 10px; background: rgba(109,124,255,.10); border: 1px solid rgba(109,124,255,.14);
+    }
+    .file-icon svg { width: 19px; height: 19px; color: #9da8ff; }
+    .file-info { min-width: 0; }
+    .file-name { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 720; }
+    .file-meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .head-actions { display: flex; align-items: center; gap: 8px; }
+    .badge {
+      display: inline-flex; align-items: center; min-height: 26px; padding: 0 9px;
+      border-radius: 999px; color: #b9c1ff; background: rgba(109,124,255,.09);
+      border: 1px solid rgba(109,124,255,.18); font-size: 10px; font-weight: 780; letter-spacing: .08em;
+    }
+    #replaceBtn { min-height: 34px; padding: 0 11px; font-size: 11px; }
+
+    .canvas-wrap {
+      min-height: 420px;
+      display: grid; place-items: center; overflow: hidden;
+      border-radius: 14px; border: 1px solid var(--border);
+      padding: 18px;
+      background:
+        linear-gradient(45deg, rgba(255,255,255,.022) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.022) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.022) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.022) 75%),
+        #090f1b;
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+    #previewCanvas { max-width: 100%; max-height: 640px; height: auto; display: block; background: white; box-shadow: 0 18px 40px rgba(0,0,0,.28); }
+    .nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 13px; }
+    .nav button { min-height: 36px; font-size: 11px; padding: 0 12px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .page-readout { text-align: center; margin-top: 7px; color: var(--muted); font-size: 11px; }
+
+    .settings { padding: 19px; position: sticky; top: 18px; }
+    .settings-head { margin-bottom: 18px; }
+    .settings-kicker { color: #9aa5ff; font-size: 10px; font-weight: 760; letter-spacing: .13em; text-transform: uppercase; }
+    .settings h2 { margin: 5px 0 0; font-size: 19px; letter-spacing: -.025em; }
+    .setting-group { padding: 15px 0; border-top: 1px solid var(--border); }
+    .setting-group:first-of-type { border-top: 0; padding-top: 0; }
+    .group-title { margin-bottom: 10px; color: var(--muted); font-size: 10px; font-weight: 760; letter-spacing: .11em; text-transform: uppercase; }
+    .setting-line {
+      display: grid; grid-template-columns: minmax(0, 1fr) 138px;
+      align-items: center; gap: 16px; min-height: 48px;
+    }
+    .setting-line + .setting-line { margin-top: 4px; }
+    .setting-line label { min-width: 0; font-size: 12px; font-weight: 630; color: #d4dae5; }
+    .setting-line .right { width: 138px; justify-self: end; }
+    .setting-line .pair { width: 138px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    input[type="number"], select {
+      width: 100%; min-height: 38px; padding: 0 10px;
+      border: 1px solid var(--border-strong); border-radius: 9px;
+      color: #eff3fa; background: rgba(255,255,255,.035);
+      font: inherit; font-size: 12px; outline: none;
+    }
+    select { cursor: pointer; }
+    input:focus, select:focus, button:focus-visible, .drop:focus-visible {
+      border-color: rgba(126,231,255,.62);
+      outline: 3px solid rgba(109,124,255,.13);
+      outline-offset: 1px;
+    }
+    .hint { margin-top: 7px; color: var(--muted-2); font-size: 10px; line-height: 1.55; }
+    .actions { display: grid; grid-template-columns: 1fr auto; gap: 9px; margin-top: 5px; }
+    #generateBtn { min-height: 46px; }
+    #cancelBtn { min-width: 72px; }
+    .progress-box { margin-top: 14px; }
+    .progress-track { height: 5px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.055); }
+    .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .15s linear; }
+    .status { margin-top: 9px; min-height: 17px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+
+    .result { display: none; margin-top: 18px; padding: 16px; }
+    .result.show { display: block; }
+    .result-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .result-title { font-size: 14px; font-weight: 720; }
+    .result-meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .result img { display: block; max-width: 100%; height: auto; margin: 0 auto; border: 1px solid var(--border); border-radius: 12px; background: white; }
+
+    .notice {
+      display: none;
+      margin-top: 16px; padding: 12px 14px;
+      border: 1px solid var(--border); border-radius: 12px;
+      color: var(--muted); background: rgba(255,255,255,.018);
+      font-size: 10px; line-height: 1.65;
+    }
+    .app-loaded .notice { display: block; }
+
+    @media (max-width: 900px) {
+      .workspace, .app-loaded .workspace { grid-template-columns: 1fr; }
+      .settings { position: static; }
+      .upload-stage { min-height: 560px; }
+    }
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 20px, 1240px); padding-top: 18px; }
+      .topbar { align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+      .brand-sub { display: none; }
+      .local-pill { padding: 0 9px; font-size: 10px; }
+      .upload-stage { min-height: 520px; padding-top: 16px; }
+      .hero-copy h1 { font-size: clamp(38px, 13vw, 56px); }
+      .hero-copy p { font-size: 13px; }
+      .upload-inner { padding: 9px; }
+      .drop { min-height: 250px; padding: 30px 18px; }
+      .drop strong { font-size: 19px; }
+      .trust-row { gap: 10px 16px; }
+      .preview-card, .settings { padding: 12px; }
+      .canvas-wrap { min-height: 240px; padding: 9px; }
+      .file-name { max-width: 190px; }
+      .setting-line { grid-template-columns: minmax(0,1fr) 124px; gap: 10px; }
+      .setting-line .right, .setting-line .pair { width: 124px; }
+      .head-actions .badge { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+  </style>
+  <style id="pageloop-light-theme">
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fd;
+      --panel: rgba(255,255,255,.86);
+      --panel-solid: #ffffff;
+      --panel-2: #f8faff;
+      --text: #1a2235;
+      --muted: #6f7b90;
+      --muted-2: #98a2b3;
+      --border: rgba(82, 98, 128, .13);
+      --border-strong: rgba(82, 98, 128, .21);
+      --accent: #6775f4;
+      --accent-2: #38bdf8;
+      --accent-hover: #5868ee;
+      --danger: #d85a69;
+      --ok: #15a477;
+      --shadow: 0 24px 64px rgba(58, 78, 120, .11);
+      --glow: 0 0 0 1px rgba(103,117,244,.055), 0 18px 48px rgba(70,91,145,.09);
+    }
+    body {
+      color: var(--text);
+      background:
+        radial-gradient(circle at 11% -7%, rgba(115,130,255,.16), transparent 29%),
+        radial-gradient(circle at 91% 3%, rgba(56,189,248,.13), transparent 25%),
+        linear-gradient(180deg, #fbfcff 0%, #f6f8fd 50%, #f2f5fb 100%);
+    }
+    body::before {
+      opacity: .46;
+      background-image:
+        linear-gradient(rgba(95,113,160,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(95,113,160,.055) 1px, transparent 1px);
+      mask-image: linear-gradient(to bottom, black, transparent 82%);
+    }
+    .brand-mark {
+      background: linear-gradient(135deg, #6f7cf6, #50c7f2);
+      box-shadow: 0 10px 30px rgba(91,111,235,.22);
+      color: white;
+    }
+    .local-pill {
+      background: rgba(255,255,255,.67);
+      border-color: rgba(91,108,145,.13);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+    }
+    .local-pill i { box-shadow: 0 0 10px rgba(21,164,119,.32); }
+    .eyebrow { color: #6c78df; }
+    .eyebrow::before, .eyebrow::after { background: rgba(108,120,223,.30); }
+    .hero-copy h1 .gradient {
+      background: linear-gradient(100deg, #5363da 0%, #6d78ef 46%, #2caed8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .upload-card {
+      background: linear-gradient(135deg, rgba(103,117,244,.42), rgba(56,189,248,.16) 48%, rgba(255,255,255,.92));
+      box-shadow: 0 28px 80px rgba(69,88,140,.12), 0 0 90px rgba(103,117,244,.07);
+    }
+    .upload-inner {
+      background: rgba(255,255,255,.91);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.88);
+    }
+    .drop {
+      border-color: rgba(93,110,148,.25);
+      background:
+        radial-gradient(circle at 50% 16%, rgba(103,117,244,.095), transparent 46%),
+        rgba(247,249,255,.64);
+    }
+    .drop:hover, .drop.dragover {
+      border-color: rgba(61,174,220,.58);
+      background:
+        radial-gradient(circle at 50% 16%, rgba(103,117,244,.14), transparent 49%),
+        rgba(245,249,255,.92);
+    }
+    .drop-icon {
+      color: #6472df;
+      background: linear-gradient(145deg, rgba(103,117,244,.12), rgba(56,189,248,.075));
+      border-color: rgba(103,117,244,.14);
+      box-shadow: inset 0 1px rgba(255,255,255,.9), 0 8px 24px rgba(91,109,182,.08);
+    }
+    .formats { color: #9aa4b7; }
+    button, .button-link {
+      color: #fff;
+      background: linear-gradient(135deg, #6977f3, #586be9);
+      box-shadow: 0 10px 22px rgba(82,99,220,.16);
+    }
+    button:hover:not(:disabled), .button-link:hover {
+      background: linear-gradient(135deg, #7582f7, #6374ed);
+      box-shadow: 0 12px 26px rgba(82,99,220,.20);
+    }
+    button.secondary {
+      background: rgba(248,250,255,.92);
+      color: #4e5d75;
+      border-color: rgba(82,98,128,.15);
+    }
+    button.secondary:hover:not(:disabled) { background: #f0f4fb; }
+    button.danger {
+      background: #fff7f8;
+      color: var(--danger);
+      border-color: rgba(216,90,105,.20);
+    }
+    .mini-track, .progress-track { background: rgba(89,106,145,.10); }
+    .trust-row b { background: #a7b1c7; }
+    .card {
+      border-color: rgba(82,98,128,.12);
+      background: rgba(255,255,255,.84);
+      box-shadow: var(--glow);
+      backdrop-filter: blur(18px);
+    }
+    .file-icon {
+      background: rgba(103,117,244,.085);
+      border-color: rgba(103,117,244,.12);
+    }
+    .file-icon svg { color: #6f7ae4; }
+    .badge {
+      color: #6470d8;
+      background: rgba(103,117,244,.075);
+      border-color: rgba(103,117,244,.14);
+    }
+    .canvas-wrap {
+      border-color: rgba(82,98,128,.13);
+      background:
+        linear-gradient(45deg, rgba(95,112,145,.045) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(95,112,145,.045) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(95,112,145,.045) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(95,112,145,.045) 75%),
+        #eef2f8;
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+    #previewCanvas { box-shadow: 0 18px 42px rgba(48,63,96,.14); }
+    .settings-kicker { color: #6975dc; }
+    .setting-line label { color: #465269; }
+    input[type="number"], select {
+      color: #263247;
+      background: #f8faff;
+      border-color: rgba(82,98,128,.18);
+    }
+    input:focus, select:focus, button:focus-visible, .drop:focus-visible {
+      border-color: rgba(61,174,220,.55);
+      outline-color: rgba(103,117,244,.11);
+    }
+    .result img { border-color: rgba(82,98,128,.13); }
+    .notice {
+      border-color: rgba(82,98,128,.12);
+      background: rgba(255,255,255,.62);
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap" id="appShell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 6.5h7.2a4.8 4.8 0 0 1 0 9.6H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m9.3 13.5 2.8 2.6-2.8 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 17.5H9.8A4.8 4.8 0 0 1 9.8 7.9H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".55"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">PageLoop</div>
+          <div class="brand-sub">PDF / PPTX → GIF</div>
+        </div>
+      </div>
+      <div class="local-pill"><i></i> Local processing · No upload</div>
+    </header>
+
+    <section class="upload-stage" id="uploadCard">
+      <div class="hero-copy">
+        <div class="eyebrow">Browser-native converter</div>
+        <h1>Turn pages into <span class="gradient">motion.</span></h1>
+        <p>把 PDF 或 PPTX 直接变成自动翻页 GIF。所有页面都在当前浏览器中渲染与编码，不经过后端服务器。</p>
+      </div>
+
+      <div class="upload-card">
+        <div class="upload-inner">
+          <div class="drop" id="dropZone" tabindex="0" role="button" aria-label="选择或拖入 PDF 或 PPTX 文件">
+            <input id="fileInput" type="file" accept=".pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+            <div>
+              <div class="drop-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13.5v3.7A2.8 2.8 0 0 0 7.8 20h8.4a2.8 2.8 0 0 0 2.8-2.8v-3.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              </div>
+              <strong>Drop your deck here</strong>
+              <span>拖入 PDF 或 PPTX，或从本地选择文件</span>
+              <div class="formats">PDF · PPTX &nbsp; / &nbsp; Max quality stays local</div>
+              <button type="button" id="chooseBtn">选择文件</button>
+            </div>
+          </div>
+          <div class="upload-progress">
+            <div class="mini-track"><div class="mini-bar" id="heroProgressBar"></div></div>
+            <div class="hero-status" id="heroStatus" aria-live="polite">Ready for PDF or PPTX</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trust-row" aria-label="工具特点">
+        <span><b></b>纯前端运行</span>
+        <span><b></b>自动统一页面尺寸</span>
+        <span><b></b>逐页 GIF 编码</span>
+        <span><b></b>无需安装软件</span>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace">
+      <div>
+        <div class="card preview-card" id="previewCard" style="display:none;">
+          <div class="preview-head">
+            <div class="file-block">
+              <div class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 3.8h6.8L18 8v12.2H7V3.8Z" stroke="currentColor" stroke-width="1.6"/><path d="M13.5 4v4.4H18" stroke="currentColor" stroke-width="1.6"/></svg>
+              </div>
+              <div class="file-info">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-meta" id="fileMeta"></div>
+              </div>
+            </div>
+            <div class="head-actions">
+              <span class="badge" id="formatBadge"></span>
+              <button type="button" class="secondary" id="replaceBtn">更换文件</button>
+            </div>
+          </div>
+
+          <div class="canvas-wrap" id="canvasWrap"><canvas id="previewCanvas"></canvas></div>
+
+          <div class="nav">
+            <button type="button" class="secondary" id="prevBtn">← 上一页</button>
+            <input id="pageSlider" type="range" min="1" max="1" value="1" aria-label="预览页码" />
+            <button type="button" class="secondary" id="nextBtn">下一页 →</button>
+          </div>
+          <div class="page-readout" id="pageReadout">第 1 / 1 页</div>
+        </div>
+
+        <div class="card result" id="resultCard">
+          <div class="result-head">
+            <div>
+              <div class="result-title">GIF 已生成</div>
+              <div class="result-meta" id="resultMeta"></div>
+            </div>
+            <a class="button-link" id="downloadBtn" download>下载 GIF</a>
+          </div>
+          <img id="resultImg" alt="生成的 GIF 预览" />
+        </div>
+      </div>
+
+      <aside class="card settings">
+        <div class="settings-head">
+          <div class="settings-kicker">Output control</div>
+          <h2>生成设置</h2>
+        </div>
+
+        <div class="setting-group">
+          <div class="group-title">Page range</div>
+          <div class="setting-line">
+            <label>页面范围</label>
+            <div class="pair">
+              <input id="startPage" aria-label="起始页" type="number" min="1" value="1" disabled />
+              <input id="endPage" aria-label="结束页" type="number" min="1" value="1" disabled />
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="group-title">Timing</div>
+          <div class="setting-line">
+            <label for="delaySec">每页停留</label>
+            <input class="right" id="delaySec" type="number" min="0.1" max="60" step="0.1" value="1.0" />
+          </div>
+          <div class="setting-line">
+            <label for="lastExtraSec">末页额外停留</label>
+            <input class="right" id="lastExtraSec" type="number" min="0" max="60" step="0.1" value="0" />
+          </div>
+          <div class="hint">单位为秒。适合论文展示时可用 1.0–2.0 s / 页。</div>
+        </div>
+
+        <div class="setting-group">
+          <div class="group-title">Quality</div>
+          <div class="setting-line">
+            <label for="outputWidth">输出宽度</label>
+            <input class="right" id="outputWidth" type="number" min="320" max="1920" step="10" value="960" />
+          </div>
+          <div class="setting-line">
+            <label for="colorCount">每帧颜色</label>
+            <select class="right" id="colorCount">
+              <option value="64">64 · Compact</option>
+              <option value="128">128 · Balanced</option>
+              <option value="256" selected>256 · High</option>
+            </select>
+          </div>
+          <div class="hint">宽度推荐 800–1280 px。分辨率越高，GIF 体积与编码开销增长越明显。</div>
+        </div>
+
+        <div class="setting-group">
+          <div class="group-title">Playback</div>
+          <div class="setting-line">
+            <label for="repeatMode">播放方式</label>
+            <select class="right" id="repeatMode">
+              <option value="loop" selected>无限循环</option>
+              <option value="once">只播放一次</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="generateBtn" disabled>生成 GIF</button>
+          <button type="button" class="danger" id="cancelBtn" disabled>停止</button>
+        </div>
+
+        <div class="progress-box">
+          <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="status" id="status" aria-live="polite">请先选择文件。</div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="notice">
+      <strong>兼容性：</strong>PDF 通常还原最稳定。PPTX 会直接在浏览器中解析；常规文字、图片、形状和表格可以直接处理，但复杂 SmartArt、部分原生图表、特殊字体或 PowerPoint 动画可能无法与桌面版 PowerPoint 100% 一致。高保真展示建议先从 PowerPoint 导出 PDF。
+    </div>
+  </main>
+
+  <script type="module">
+    import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.mjs';
+    import { PptxRenderer } from 'https://cdn.jsdelivr.net/npm/pptx-browser@4.1.5/+esm';
+    import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/pdf.worker.mjs';
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      appShell: $('appShell'), heroStatus: $('heroStatus'), heroProgressBar: $('heroProgressBar'),
+      fileInput: $('fileInput'), chooseBtn: $('chooseBtn'), replaceBtn: $('replaceBtn'), dropZone: $('dropZone'),
+      previewCard: $('previewCard'), previewCanvas: $('previewCanvas'), fileName: $('fileName'),
+      fileMeta: $('fileMeta'), formatBadge: $('formatBadge'), pageSlider: $('pageSlider'),
+      prevBtn: $('prevBtn'), nextBtn: $('nextBtn'), pageReadout: $('pageReadout'),
+      startPage: $('startPage'), endPage: $('endPage'), delaySec: $('delaySec'),
+      lastExtraSec: $('lastExtraSec'), outputWidth: $('outputWidth'), colorCount: $('colorCount'),
+      repeatMode: $('repeatMode'), generateBtn: $('generateBtn'), cancelBtn: $('cancelBtn'),
+      progressBar: $('progressBar'), status: $('status'), resultCard: $('resultCard'),
+      resultImg: $('resultImg'), resultMeta: $('resultMeta'), downloadBtn: $('downloadBtn')
+    };
+
+    let sourceType = null;
+    let sourceFile = null;
+    let pageCount = 0;
+    let currentPage = 0;
+    let pdfDoc = null;
+    let pptxRenderer = null;
+    let resultUrl = null;
+    let cancelRequested = false;
+    let renderToken = 0;
+
+    function setStatus(message, kind = '') {
+      els.status.textContent = message;
+      els.status.className = `status ${kind}`.trim();
+      els.heroStatus.textContent = message;
+      els.heroStatus.className = `hero-status ${kind}`.trim();
+    }
+
+    function setProgress(value) {
+      const pct = Math.max(0, Math.min(100, Number(value) || 0));
+      els.progressBar.style.width = `${pct}%`;
+      els.heroProgressBar.style.width = `${pct}%`;
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0) return '';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let n = bytes;
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function cleanupResult() {
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      resultUrl = null;
+      els.resultImg.removeAttribute('src');
+      els.downloadBtn.removeAttribute('href');
+      els.resultCard.classList.remove('show');
+    }
+
+    async function resetSource() {
+      cleanupResult();
+      renderToken++;
+      if (pdfDoc) {
+        try { await pdfDoc.destroy(); } catch (_) {}
+        pdfDoc = null;
+      }
+      if (pptxRenderer) {
+        try { pptxRenderer.destroy(); } catch (_) {}
+        pptxRenderer = null;
+      }
+      sourceType = null;
+      sourceFile = null;
+      pageCount = 0;
+      currentPage = 0;
+      els.previewCard.style.display = 'none';
+      els.appShell.classList.remove('app-loaded');
+      els.generateBtn.disabled = true;
+      els.startPage.disabled = true;
+      els.endPage.disabled = true;
+      setProgress(0);
+    }
+
+    function validateNumber(el, min, max, fallback) {
+      let v = Number(el.value);
+      if (!Number.isFinite(v)) v = fallback;
+      v = Math.max(min, Math.min(max, v));
+      el.value = String(v);
+      return v;
+    }
+
+    async function loadFile(file) {
+      await resetSource();
+      sourceFile = file;
+      const lower = file.name.toLowerCase();
+
+      if (lower.endsWith('.ppt')) {
+        sourceFile = null;
+        setStatus('旧版 .ppt（二进制格式）无法在纯浏览器方案中可靠渲染。请先另存为 .pptx 或 PDF。', 'error');
+        return;
+      }
+
+      try {
+        setStatus('正在读取文件…');
+        setProgress(3);
+
+        if (lower.endsWith('.pdf') || file.type === 'application/pdf') {
+          sourceType = 'pdf';
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const task = pdfjsLib.getDocument({ data: bytes });
+          pdfDoc = await task.promise;
+          pageCount = pdfDoc.numPages;
+          els.formatBadge.textContent = 'PDF';
+        } else if (lower.endsWith('.pptx')) {
+          sourceType = 'pptx';
+          pptxRenderer = new PptxRenderer();
+          await pptxRenderer.load(file, (progress, message) => {
+            setProgress(5 + Math.round((Number(progress) || 0) * 45));
+            if (message) setStatus(`正在解析 PPTX：${message}`);
+          });
+          pageCount = pptxRenderer.slideCount;
+          els.formatBadge.textContent = 'PPTX';
+        } else {
+          throw new Error('仅支持 PDF 与 PPTX。');
+        }
+
+        if (!pageCount) throw new Error('没有检测到可用页面。');
+
+        currentPage = 0;
+        els.fileName.textContent = file.name;
+        els.fileMeta.textContent = `${pageCount} 页 · ${formatBytes(file.size)}`;
+        els.pageSlider.min = '1';
+        els.pageSlider.max = String(pageCount);
+        els.pageSlider.value = '1';
+        els.startPage.min = '1';
+        els.startPage.max = String(pageCount);
+        els.startPage.value = '1';
+        els.endPage.min = '1';
+        els.endPage.max = String(pageCount);
+        els.endPage.value = String(pageCount);
+        els.startPage.disabled = false;
+        els.endPage.disabled = false;
+        els.generateBtn.disabled = false;
+        els.previewCard.style.display = 'block';
+        els.appShell.classList.add('app-loaded');
+        setProgress(100);
+        setStatus(`读取完成：共 ${pageCount} 页。`, 'ok');
+        await renderPreview(0);
+      } catch (err) {
+        console.error(err);
+        setStatus(`读取失败：${err?.message || err}`, 'error');
+        els.generateBtn.disabled = true;
+      }
+    }
+
+    async function renderSourcePage(index, width) {
+      width = Math.max(64, Math.round(width));
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+      if (!ctx) throw new Error('浏览器无法创建 Canvas 2D 上下文。');
+
+      if (sourceType === 'pdf') {
+        const page = await pdfDoc.getPage(index + 1);
+        const base = page.getViewport({ scale: 1 });
+        const scale = width / base.width;
+        const viewport = page.getViewport({ scale });
+        canvas.width = Math.max(1, Math.round(viewport.width));
+        canvas.height = Math.max(1, Math.round(viewport.height));
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport, background: '#ffffff' }).promise;
+        return canvas;
+      }
+
+      if (sourceType === 'pptx') {
+        await pptxRenderer.renderSlide(index, canvas, width);
+        return canvas;
+      }
+
+      throw new Error('尚未加载文件。');
+    }
+
+    async function renderPreview(index) {
+      if (!sourceType || index < 0 || index >= pageCount) return;
+      const myToken = ++renderToken;
+      currentPage = index;
+      els.pageSlider.value = String(index + 1);
+      els.pageReadout.textContent = `第 ${index + 1} / ${pageCount} 页`;
+      els.prevBtn.disabled = index <= 0;
+      els.nextBtn.disabled = index >= pageCount - 1;
+
+      try {
+        const maxPreviewWidth = Math.min(1100, Math.max(420, document.querySelector('.preview-card').clientWidth - 56));
+        const canvas = await renderSourcePage(index, maxPreviewWidth);
+        if (myToken !== renderToken) return;
+        els.previewCanvas.width = canvas.width;
+        els.previewCanvas.height = canvas.height;
+        const ctx = els.previewCanvas.getContext('2d', { alpha: false });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(canvas, 0, 0);
+      } catch (err) {
+        console.error(err);
+        if (myToken === renderToken) setStatus(`预览失败：${err?.message || err}`, 'error');
+      }
+    }
+
+    async function getCommonOutputHeight(indices, width) {
+      let maxHeight = 1;
+      if (sourceType === 'pdf') {
+        for (const idx of indices) {
+          const page = await pdfDoc.getPage(idx + 1);
+          const vp = page.getViewport({ scale: 1 });
+          maxHeight = Math.max(maxHeight, Math.round(width * vp.height / vp.width));
+        }
+        return maxHeight;
+      }
+
+      const sample = await renderSourcePage(indices[0], width);
+      return sample.height;
+    }
+
+    function composeFrame(sourceCanvas, width, height) {
+      const out = document.createElement('canvas');
+      out.width = width;
+      out.height = height;
+      const ctx = out.getContext('2d', { alpha: false, willReadFrequently: true });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      const scale = Math.min(width / sourceCanvas.width, height / sourceCanvas.height);
+      const dw = Math.max(1, Math.round(sourceCanvas.width * scale));
+      const dh = Math.max(1, Math.round(sourceCanvas.height * scale));
+      const dx = Math.round((width - dw) / 2);
+      const dy = Math.round((height - dh) / 2);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(sourceCanvas, dx, dy, dw, dh);
+      return out;
+    }
+
+    async function generateGif() {
+      if (!sourceType || !sourceFile || pageCount < 1) return;
+      cleanupResult();
+      cancelRequested = false;
+
+      let start = Math.round(validateNumber(els.startPage, 1, pageCount, 1));
+      let end = Math.round(validateNumber(els.endPage, 1, pageCount, pageCount));
+      if (start > end) [start, end] = [end, start];
+      els.startPage.value = String(start);
+      els.endPage.value = String(end);
+
+      const delaySec = validateNumber(els.delaySec, 0.1, 60, 1);
+      const lastExtraSec = validateNumber(els.lastExtraSec, 0, 60, 0);
+      const width = Math.round(validateNumber(els.outputWidth, 320, 1920, 960));
+      const maxColors = Number(els.colorCount.value) || 256;
+      const repeat = els.repeatMode.value === 'once' ? -1 : 0;
+      const indices = Array.from({ length: end - start + 1 }, (_, i) => start - 1 + i);
+
+      if (indices.length > 120) {
+        const go = window.confirm(`将生成 ${indices.length} 帧 GIF，文件可能非常大，浏览器也可能占用较多内存。仍要继续吗？`);
+        if (!go) return;
+      }
+
+      els.generateBtn.disabled = true;
+      els.cancelBtn.disabled = false;
+      setProgress(0);
+      setStatus('正在计算统一画布尺寸…');
+
+      try {
+        const height = await getCommonOutputHeight(indices, width);
+        if (width * height > 4_000_000) {
+          throw new Error(`输出画布 ${width}×${height} 过大。请降低输出宽度。`);
+        }
+
+        const gif = GIFEncoder();
+        const total = indices.length;
+
+        for (let i = 0; i < total; i++) {
+          if (cancelRequested) throw new Error('__CANCELLED__');
+          const idx = indices[i];
+          setStatus(`正在渲染第 ${idx + 1} 页，并编码第 ${i + 1} / ${total} 帧…`);
+          setProgress((i / total) * 92);
+
+          const sourceCanvas = await renderSourcePage(idx, width);
+          if (cancelRequested) throw new Error('__CANCELLED__');
+          const frame = composeFrame(sourceCanvas, width, height);
+          const ctx = frame.getContext('2d', { alpha: false, willReadFrequently: true });
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const palette = quantize(imageData.data, maxColors, { format: 'rgb565' });
+          const indexed = applyPalette(imageData.data, palette, 'rgb565');
+          const isLast = i === total - 1;
+          const frameDelay = Math.round((delaySec + (isLast ? lastExtraSec : 0)) * 1000);
+
+          gif.writeFrame(indexed, width, height, {
+            palette,
+            delay: frameDelay,
+            repeat,
+            dispose: 1
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        if (cancelRequested) throw new Error('__CANCELLED__');
+        setStatus('正在完成 GIF…');
+        setProgress(96);
+        gif.finish();
+        const bytes = gif.bytes();
+        const blob = new Blob([bytes], { type: 'image/gif' });
+        resultUrl = URL.createObjectURL(blob);
+
+        const base = sourceFile.name.replace(/\.(pdf|pptx)$/i, '');
+        const suffix = (start === 1 && end === pageCount) ? '' : `_p${start}-${end}`;
+        const filename = `${base}${suffix}.gif`;
+        els.resultImg.src = resultUrl;
+        els.downloadBtn.href = resultUrl;
+        els.downloadBtn.download = filename;
+        els.resultMeta.textContent = `${width} × ${height} · ${indices.length} 帧 · ${formatBytes(blob.size)}`;
+        els.resultCard.classList.add('show');
+        setProgress(100);
+        setStatus(`完成：${filename}`, 'ok');
+        els.resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) {
+        console.error(err);
+        if (err?.message === '__CANCELLED__') {
+          setStatus('已停止生成。');
+          setProgress(0);
+        } else {
+          setStatus(`生成失败：${err?.message || err}`, 'error');
+        }
+      } finally {
+        els.cancelBtn.disabled = true;
+        els.generateBtn.disabled = !sourceType;
+        cancelRequested = false;
+      }
+    }
+
+    els.replaceBtn.addEventListener('click', () => els.fileInput.click());
+
+    els.chooseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      els.fileInput.click();
+    });
+    els.dropZone.addEventListener('click', (e) => {
+      if (e.target !== els.chooseBtn) els.fileInput.click();
+    });
+    els.dropZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        els.fileInput.click();
+      }
+    });
+    els.fileInput.addEventListener('change', () => {
+      const file = els.fileInput.files?.[0];
+      if (file) loadFile(file);
+    });
+
+    ['dragenter', 'dragover'].forEach(type => {
+      els.dropZone.addEventListener(type, (e) => {
+        e.preventDefault();
+        els.dropZone.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(type => {
+      els.dropZone.addEventListener(type, (e) => {
+        e.preventDefault();
+        els.dropZone.classList.remove('dragover');
+      });
+    });
+    els.dropZone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) loadFile(file);
+    });
+
+    els.prevBtn.addEventListener('click', () => renderPreview(Math.max(0, currentPage - 1)));
+    els.nextBtn.addEventListener('click', () => renderPreview(Math.min(pageCount - 1, currentPage + 1)));
+    els.pageSlider.addEventListener('input', () => renderPreview(Number(els.pageSlider.value) - 1));
+    els.generateBtn.addEventListener('click', generateGif);
+    els.cancelBtn.addEventListener('click', () => { cancelRequested = true; setStatus('将在当前页处理结束后停止…'); });
+
+    window.addEventListener('beforeunload', () => {
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      try { pptxRenderer?.destroy(); } catch (_) {}
+    });
+  </script>
+</body>
+</html>
